@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#121318">
+  <meta name="description" content="DURF Monster Generator от NextNameGames: случайные встречи, фильтры существ и история бросков.">
+  <title>DURF Monster Generator | NextNameGames</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #121318;
+      --panel: #1e2029;
+      --panel-soft: #191a21;
+      --text: #f1eee6;
+      --muted: #a3a2a6;
+      --gold: #e5a93b;
+      --peaceful: #4caf50;
+      --neutral: #e5a93b;
+      --hostile: #e53935;
+      --boss: #9d4edd;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      position: relative;
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse at 50% -12%, #2b2a31 0%, #1a1b22 34%, var(--bg) 72%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      position: fixed;
+      z-index: 0;
+      inset: -18vh -12vw;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 18% 34%, rgba(143, 74, 35, .13), transparent 31%),
+        radial-gradient(ellipse at 83% 67%, rgba(91, 54, 126, .11), transparent 34%);
+      content: "";
+      animation: ember-drift 18s ease-in-out infinite alternate;
+    }
+
+    button { font: inherit; }
+
+    button:focus-visible {
+      outline: 2px solid #ffe0a0;
+      outline-offset: 3px;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 1120px);
+      margin: 0 auto;
+      padding: max(22px, env(safe-area-inset-top)) 28px max(38px, env(safe-area-inset-bottom));
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 52px;
+      border-bottom: 1px solid rgba(229, 169, 59, .2);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #f0d39b;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 31px;
+      height: 31px;
+      place-items: center;
+      border: 1px solid rgba(229, 169, 59, .7);
+      color: var(--gold);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .topbar-note {
+      color: #85848b;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .hero {
+      padding: 51px 0 19px;
+      text-align: center;
+    }
+
+    .hero-kicker {
+      margin: 0 0 12px;
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .26em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 980px;
+      margin: 0 auto;
+      color: #f7f1e3;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(30px, 5vw, 49px);
+      font-weight: 700;
+      letter-spacing: .035em;
+      line-height: 1.14;
+      text-shadow: 0 2px 24px rgba(229, 169, 59, .16);
+    }
+
+    .hero-subtitle {
+      margin: 15px 0 0;
+      color: #aaa8ad;
+      font-size: 14px;
+      letter-spacing: .035em;
+    }
+
+    .encounter-area {
+      width: 100%;
+      margin: 22px auto 0;
+      text-align: center;
+    }
+
+    .filter-title {
+      margin: 0 0 13px;
+      color: #c9c4b9;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 9px;
+    }
+
+    .filter-btn {
+      min-height: 43px;
+      padding: 9px 16px;
+      border: 1px solid #4b4b54;
+      border-radius: 999px;
+      background: #191a21;
+      color: #85858d;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      transition: color .16s ease, background-color .16s ease, border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .filter-btn[data-category="peaceful"] { --filter-color: var(--peaceful); --filter-fill: rgba(76, 175, 80, .14); }
+    .filter-btn[data-category="neutral"] { --filter-color: var(--neutral); --filter-fill: rgba(229, 169, 59, .13); }
+    .filter-btn[data-category="hostile"] { --filter-color: var(--hostile); --filter-fill: rgba(229, 57, 53, .13); }
+    .filter-btn[data-category="boss"] { --filter-color: var(--boss); --filter-fill: rgba(157, 78, 221, .16); }
+
+    .filter-btn[aria-pressed="true"] {
+      border-color: var(--filter-color);
+      background: var(--filter-fill);
+      color: var(--filter-color);
+    }
+
+    .filter-btn[data-category="boss"][aria-pressed="true"] {
+      box-shadow: 0 0 13px rgba(157, 78, 221, .3), 0 0 3px rgba(229, 169, 59, .7);
+    }
+
+    .filter-btn:hover { transform: translateY(-1px); }
+    .filter-btn:active { transform: translateY(1px); }
+
+    .filter-notice {
+      margin: 12px 0 0;
+      color: #edc673;
+      font-size: 13px;
+    }
+
+    .main-button {
+      display: inline-flex;
+      min-width: min(100%, 300px);
+      min-height: 59px;
+      align-items: center;
+      justify-content: center;
+      gap: 11px;
+      margin: 27px auto 0;
+      padding: 13px 25px;
+      border: 1px solid #ffdb91;
+      border-radius: 5px;
+      background: linear-gradient(135deg, #efbd5b, #d9922d);
+      box-shadow: 0 7px 24px rgba(194, 125, 29, .22), inset 0 1px 0 rgba(255, 255, 255, .28);
+      color: #241a0c;
+      cursor: pointer;
+      font-size: 17px;
+      font-weight: 850;
+      letter-spacing: .015em;
+      transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .main-button:hover {
+      box-shadow: 0 10px 28px rgba(194, 125, 29, .34), inset 0 1px 0 rgba(255, 255, 255, .33);
+      transform: translateY(-2px);
+    }
+
+    .main-button:active { transform: translateY(1px) scale(.99); }
+    .main-button:disabled { cursor: wait; }
+
+    .button-icon {
+      display: inline-block;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .main-button.is-searching .button-icon { animation: die-roll .25s ease-in-out 1; }
+
+    .result-wrap {
+      width: min(100%, 850px);
+      margin: 31px auto 0;
+      text-align: left;
+    }
+
+    .monster-card {
+      --category-color: var(--gold);
+      padding: clamp(21px, 4vw, 34px);
+      border: 1px solid var(--category-color);
+      background:
+        linear-gradient(140deg, rgba(255, 255, 255, .025), transparent 42%),
+        var(--panel);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, .3), inset 0 0 0 1px rgba(255, 255, 255, .018);
+      transform-origin: 50% 0;
+    }
+
+    .monster-card.cat-peaceful { --category-color: var(--peaceful); }
+    .monster-card.cat-neutral { --category-color: var(--neutral); }
+    .monster-card.cat-hostile { --category-color: var(--hostile); }
+    .monster-card.cat-boss {
+      --category-color: var(--boss);
+      box-shadow: 0 0 22px rgba(157, 78, 221, .2), 0 0 5px rgba(229, 169, 59, .21), 0 14px 40px rgba(0, 0, 0, .3);
+    }
+
+    .monster-card.is-entering { animation: card-arrive .32s ease-out 1; }
+
+    .monster-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 17px;
+    }
+
+    .result-eyebrow {
+      margin: 0 0 8px;
+      color: #898790;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .monster-name {
+      margin: 0;
+      color: #f5efe4;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(25px, 4vw, 36px);
+      font-weight: 700;
+      line-height: 1.14;
+    }
+
+    .category-badge {
+      flex: 0 0 auto;
+      margin-top: 5px;
+      padding: 7px 11px;
+      border: 1px solid var(--category-color);
+      border-radius: 2px;
+      background: rgba(255, 255, 255, .035);
+      color: var(--category-color);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .035em;
+      white-space: nowrap;
+    }
+
+    .cat-boss .category-badge { box-shadow: 0 0 10px rgba(157, 78, 221, .28), 0 0 3px rgba(229, 169, 59, .46); }
+
+    .stat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 22px 0 21px;
+    }
+
+    .stat-chip {
+      display: inline-flex;
+      min-height: 37px;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border: 1px solid #393a44;
+      background: #181920;
+      color: #e4dfd3;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .stat-chip strong {
+      color: #fff5df;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .stat-chip--attack { flex: 1 1 240px; }
+    .monster-details { border-top: 1px solid rgba(255, 255, 255, .09); }
+
+    .detail-line {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin: 0;
+      padding: 13px 0 0;
+      color: #ddd8cf;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .detail-label {
+      flex: 0 0 auto;
+      font-weight: 800;
+    }
+
+    .detail-line--special .detail-label,
+    .detail-line--special .detail-value { color: #f2c85e; }
+    .detail-line--weakness .detail-label,
+    .detail-line--weakness .detail-value { color: #ec7770; }
+    .detail-line--loot .detail-label,
+    .detail-line--loot .detail-value { color: #edc16b; }
+
+    .history-section {
+      width: min(100%, 850px);
+      margin: 42px auto 0;
+      padding-top: 22px;
+      border-top: 1px solid rgba(229, 169, 59, .22);
+    }
+
+    .history-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .history-title {
+      margin: 0;
+      color: #eee7d8;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .history-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+    }
+
+    .encounter-count {
+      color: #e8bd69;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .clear-history {
+      min-height: 38px;
+      padding: 7px 11px;
+      border: 1px solid #4b3f36;
+      border-radius: 3px;
+      background: transparent;
+      color: #c8a67c;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      transition: border-color .16s ease, color .16s ease, background-color .16s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .clear-history:hover:not(:disabled) {
+      border-color: #c47a58;
+      background: rgba(196, 122, 88, .08);
+      color: #ec9c7b;
+    }
+
+    .clear-history:disabled { cursor: default; color: #69656a; }
+
+    .history-empty {
+      margin: 22px 0 0;
+      color: #898891;
+      font-size: 14px;
+      font-style: italic;
+      text-align: center;
+    }
+
+    .history-list {
+      margin: 13px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .history-item {
+      display: flex;
+      min-height: 53px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .075);
+    }
+
+    .history-info {
+      display: flex;
+      min-width: 0;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .history-name {
+      overflow: hidden;
+      color: #e8e4dd;
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-category {
+      flex: 0 0 auto;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .history-category.cat-peaceful { color: var(--peaceful); }
+    .history-category.cat-neutral { color: var(--neutral); }
+    .history-category.cat-hostile { color: var(--hostile); }
+    .history-category.cat-boss { color: var(--boss); text-shadow: 0 0 8px rgba(229, 169, 59, .32); }
+
+    .remove-history {
+      display: grid;
+      width: 37px;
+      height: 37px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 0;
+      background: transparent;
+      color: #b87570;
+      cursor: pointer;
+      font-size: 24px;
+      line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .remove-history:hover { color: #ff8c7e; }
+
+    .footer {
+      margin: 43px 0 0;
+      color: #77757d;
+      font-size: 10px;
+      letter-spacing: .2em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    @keyframes ember-drift {
+      from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+      to { transform: translate3d(1.5%, 1.4%, 0) scale(1.035); }
+    }
+
+    @keyframes die-roll {
+      0% { transform: rotate(0deg); }
+      55% { transform: rotate(24deg) scale(1.12); }
+      100% { transform: rotate(0deg); }
+    }
+
+    @keyframes card-arrive {
+      from { transform: translateY(11px) scale(.99); }
+      to { transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 620px) {
+      .app-shell { padding-right: 18px; padding-left: 18px; }
+      .topbar-note { font-size: 9px; letter-spacing: .14em; }
+      .hero { padding-top: 43px; }
+      h1 { font-size: clamp(27px, 8vw, 39px); letter-spacing: .01em; }
+      .hero-subtitle { font-size: 13px; }
+      .encounter-area { margin-top: 19px; }
+      .filter-row { gap: 8px; }
+      .filter-btn { padding-right: 12px; padding-left: 12px; font-size: 12px; }
+      .main-button { width: min(100%, 340px); margin-top: 23px; }
+      .monster-top { gap: 10px; }
+      .category-badge { padding: 6px 8px; font-size: 10px; }
+      .stat-chip--attack { flex-basis: 100%; }
+      .history-head { align-items: flex-start; flex-direction: column; }
+      .history-actions { width: 100%; justify-content: space-between; }
+      .detail-line { display: block; }
+      .detail-label { margin-right: 4px; }
+    }
+
+    @media (max-width: 380px) {
+      .app-shell { padding-right: 14px; padding-left: 14px; }
+      .brand { gap: 7px; font-size: 11px; letter-spacing: .12em; }
+      .brand-mark { width: 28px; height: 28px; }
+      .topbar-note { letter-spacing: .09em; }
+      .filter-btn { min-height: 41px; padding-right: 9px; padding-left: 9px; }
+      .history-info { gap: 8px; }
+      .history-name { font-size: 13px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="NextNameGames">
+        <span class="brand-mark" aria-hidden="true">N</span>
+        <span>NextNameGames</span>
+      </a>
+      <span class="topbar-note">DURF / Field Tool</span>
+    </header>
+
+    <section class="hero" id="top" aria-labelledby="page-title">
+      <p class="hero-kicker">NextNameGames представляет</p>
+      <h1 id="page-title">👹 DURF MONSTER GENERATOR 👹</h1>
+      <p class="hero-subtitle">50 существ · официальные правила DURF</p>
+
+      <div class="encounter-area">
+        <h2 class="filter-title">Кого встретить?</h2>
+        <div class="filter-row" aria-label="Фильтры категорий существ">
+          <button class="filter-btn" type="button" data-category="peaceful" aria-pressed="true">😌 Мирные</button>
+          <button class="filter-btn" type="button" data-category="neutral" aria-pressed="true">😐 Нейтральные</button>
+          <button class="filter-btn" type="button" data-category="hostile" aria-pressed="true">😡 Враждебные</button>
+          <button class="filter-btn" type="button" data-category="boss" aria-pressed="true">👑 Боссы</button>
+        </div>
+        <p class="filter-notice" id="filterNotice" role="status" style="display:none;"></p>
+        <button class="main-button" id="encounterButton" type="button">
+          <span class="button-icon" id="buttonIcon" aria-hidden="true">🎲</span>
+          <span id="buttonLabel">Встретить существо</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="result-wrap" id="resultSection" aria-live="polite" style="display:none;">
+      <article class="monster-card" id="monsterCard">
+        <div class="monster-top">
+          <div>
+            <p class="result-eyebrow">Новая встреча</p>
+            <h2 class="monster-name" id="monsterName"></h2>
+          </div>
+          <span class="category-badge" id="monsterCategory"></span>
+        </div>
+        <div class="stat-row" aria-label="Характеристики">
+          <span class="stat-chip"><span>❤️ HP</span><strong id="monsterHp"></strong></span>
+          <span class="stat-chip"><span>🛡️ Броня</span><strong id="monsterArmor"></strong></span>
+          <span class="stat-chip stat-chip--attack"><span>⚔️ Атака</span><strong id="monsterAttack"></strong></span>
+          <span class="stat-chip"><span>🧠 Воля</span><strong id="monsterWill"></strong></span>
+        </div>
+        <div class="monster-details">
+          <p class="detail-line detail-line--special"><span class="detail-label">✨ Особенность:</span><span class="detail-value" id="monsterSpecial"></span></p>
+          <p class="detail-line detail-line--weakness"><span class="detail-label">☠️ Слабость:</span><span class="detail-value" id="monsterWeakness"></span></p>
+          <p class="detail-line detail-line--loot"><span class="detail-label">💰 Лут:</span><span class="detail-value" id="monsterLoot"></span></p>
+        </div>
+      </article>
+    </section>
+
+    <section class="history-section" aria-labelledby="historyTitle">
+      <div class="history-head">
+        <h2 class="history-title" id="historyTitle">Хроника встреч</h2>
+        <div class="history-actions">
+          <span class="encounter-count" id="encounterCount" aria-live="polite">Встреч существ: 0</span>
+          <button class="clear-history" id="clearHistory" type="button" disabled>🗑️ Очистить</button>
+        </div>
+      </div>
+      <p class="history-empty" id="historyEmpty" style="display:block;">Пока тихо. Первая встреча ждёт в темноте.</p>
+      <ul class="history-list" id="historyList" aria-label="История встреч" style="display:none;"></ul>
+    </section>
+
+    <footer class="footer">A NextNameGames adventure tool</footer>
+  </main>
+
+  <script>
+    const MONSTERS = [
+      // 😌 МИРНЫЕ (12)
+      {n:"Пещерный светлячок",cat:"peaceful",hp:2,arm:0,atk:"—",dmg:0,wil:2,sp:"Если поймать в банку — освещает комнату как факел",wk:"—",loot:"Светящаяся пыль (5 gp)"},
+      {n:"Слизень-мусорщик",cat:"peaceful",hp:4,arm:0,atk:"Кислотный плевок (1 dmg)",dmg:1,wil:2,sp:"Пожирает мусор и ржавчину, чистит проходы",wk:"Горсть соли",loot:"Кислотная железа (8 gp)"},
+      {n:"Гоблин-нищий",cat:"peaceful",hp:3,arm:0,atk:"Плевок (1 dmg)",dmg:1,wil:4,sp:"За 1 gp расскажет свежий слух о подземелье",wk:"—",loot:"Кошелёк (6 gp)"},
+      {n:"Древесный дух",cat:"peaceful",hp:5,arm:3,atk:"—",dmg:0,wil:8,sp:"Благословляет друзей леса: +1 HP на целый день",wk:"—",loot:"Живой жёлудь (12 gp)"},
+      {n:"Ящер-грузчик",cat:"peaceful",hp:4,arm:3,atk:"Хвост (1 dmg)",dmg:1,wil:3,sp:"Можно приручить: несёт 5 слотов груза",wk:"—",loot:"Ящерья кожа (4 gp)"},
+      {n:"Певчая жаба",cat:"peaceful",hp:2,arm:0,atk:"—",dmg:0,wil:2,sp:"Её пение успокаивает диких зверей",wk:"—",loot:"Жабья слизь (3 gp)"},
+      {n:"Гном-шахтёр Морган",cat:"peaceful",hp:5,arm:3,atk:"Кирка (2 dmg)",dmg:2,wil:6,sp:"Дерётся только в самообороне; покажет ближайшую жилу",wk:"—",loot:"Самородок (15 gp), 5 gp"},
+      {n:"Стая рогатых кроликов",cat:"peaceful",hp:3,arm:0,atk:"Рожки (1 dmg)",dmg:1,wil:2,sp:"При погоне их следы выводят к воде",wk:"—",loot:"Мех (2 gp), рожки (1 gp)"},
+      {n:"Черепаха-страж",cat:"peaceful",hp:6,arm:7,atk:"Укус (1 dmg)",dmg:1,wil:9,sp:"Прячется в панцирь — тогда её нельзя ранить",wk:"Перевернуть на спину",loot:"Панцирь (20 gp)"},
+      {n:"Мимик-горшок",cat:"peaceful",hp:4,arm:0,atk:"Лизнуть (1 dmg)",dmg:1,wil:5,sp:"Добрый мимик: меняет вещь на вещь",wk:"—",loot:"Случайная мелочь (1d10 gp)"},
+      {n:"Торговец Хобб",cat:"peaceful",hp:3,arm:0,atk:"—",dmg:0,wil:5,sp:"Продаёт снаряжение по обычным ценам прямо в подземелье",wk:"—",loot:"Товары (10 gp), 8 gp"},
+      {n:"Пещерный олень",cat:"peaceful",hp:5,arm:0,atk:"Рога (2 dmg)",dmg:2,wil:4,sp:"Светящиеся рога освещают тропу в темноте",wk:"—",loot:"Рога (10 gp), шкура (5 gp)"},
+
+      // 😐 НЕЙТРАЛЬНЫЕ (13)
+      {n:"Дикий кабан",cat:"neutral",hp:6,arm:3,atk:"Клыки (3 dmg)",dmg:3,wil:5,sp:"Таран: при разбеге +1 dmg",wk:"Отвлекается на еду",loot:"Клыки (6 gp), мясо (4 gp)"},
+      {n:"Каменный голем-сторож",cat:"neutral",hp:10,arm:7,atk:"Кулак (4 dmg)",dmg:4,wil:8,sp:"Стоит истуканом, пока не тронут охраняемую дверь",wk:"Вода в стыках замедляет его",loot:"Рунное ядро (50 gp)"},
+      {n:"Гарпия-певица",cat:"neutral",hp:6,arm:0,atk:"Когти (3 dmg)",dmg:3,wil:6,sp:"Песня: проверка WIL, иначе очарован на 1 ход",wk:"Заткнуть уши воском",loot:"Радужные перья (14 gp)"},
+      {n:"Волк-одиночка",cat:"neutral",hp:6,arm:0,atk:"Укус (3 dmg)",dmg:3,wil:5,sp:"Убегает, когда HP падает ниже 2",wk:"Боится огня",loot:"Волчья шкура (12 gp)"},
+      {n:"Пещерный медведь",cat:"neutral",hp:10,arm:3,atk:"Лапы (4 dmg)",dmg:4,wil:6,sp:"При HP ниже 3 впадает в ярость: атакует дважды",wk:"Горшок мёда",loot:"Шкура (25 gp), когти (8 gp)"},
+      {n:"Болотная русалка",cat:"neutral",hp:5,arm:0,atk:"Жемчужный плевок (2 dmg)",dmg:2,wil:7,sp:"Песня: проверка WIL, иначе идёшь в воду",wk:"Показать ей зеркало",loot:"Жемчуг (30 gp)"},
+      {n:"Тролль под мостом",cat:"neutral",hp:12,arm:3,atk:"Дубина (5 dmg)",dmg:5,wil:5,sp:"Регенерация 1 HP/ход; пропустит за 10 gp",wk:"Огонь останавливает регенерацию",loot:"Мостовая пошлина (35 gp)"},
+      {n:"Скелет-хранитель",cat:"neutral",hp:7,arm:5,atk:"Древний меч (3 dmg)",dmg:3,wil:7,sp:"Охраняет гробницу, не нападает первым",wk:"Святая вода",loot:"Древний меч (15 gp)"},
+      {n:"Кобольд-капканщик",cat:"neutral",hp:4,arm:0,atk:"Кинжал (2 dmg)",dmg:2,wil:4,sp:"В темноте первая атака по нему — промах",wk:"Громкий шум пугает",loot:"Самоцветы (18 gp), капкан (5 gp)"},
+      {n:"Грифон",cat:"neutral",hp:10,arm:3,atk:"Когти (4 dmg) + клюв (2 dmg)",dmg:4,wil:7,sp:"Нападает, если подойти к гнезду ближе 10 шагов",wk:"Отвлекается на блестяшки",loot:"Яйцо грифона (100 gp), перья (20 gp)"},
+      {n:"Молодая мантикора",cat:"neutral",hp:9,arm:3,atk:"Шипы хвоста (3 dmg)",dmg:3,wil:6,sp:"Стреляет шипами 3 раза, потом ближний бой",wk:"Щит надёжно ловит шипы",loot:"Шипы хвоста (15 gp)"},
+      {n:"Дворф-отшельник Гримнир",cat:"neutral",hp:7,arm:5,atk:"Топор (4 dmg)",dmg:4,wil:7,sp:"Пьян и зол; кружка эля делает его другом",wk:"Эль решает всё",loot:"Самогон (5 gp), 20 gp"},
+      {n:"Леший",cat:"neutral",hp:9,arm:5,atk:"Ветви (4 dmg)",dmg:4,wil:8,sp:"Свист: проверка WIL, иначе заблудился в лесу",wk:"Круг из соли",loot:"Живая смола (22 gp)"},
+
+      // 😡 ВРАЖДЕБНЫЕ (15)
+      {n:"Гоблин-засадник",cat:"hostile",hp:5,arm:3,atk:"Кривой кинжал (3 dmg)",dmg:3,wil:4,sp:"Первый удар из тени с преимуществом",wk:"Свет факела сбивает засаду",loot:"4 gp, странный ключик (2 gp)"},
+      {n:"Орк-громила",cat:"hostile",hp:9,arm:3,atk:"Двуручный меч (5 dmg)",dmg:5,wil:6,sp:"Убив врага, ревёт: +1 dmg до конца боя",wk:"Подножка валит его с ног",loot:"Трофеи (12 gp)"},
+      {n:"Скелет-воин",cat:"hostile",hp:6,arm:5,atk:"Ржавый меч (3 dmg)",dmg:3,wil:8,sp:"Нежить: не боится и не чувствует яд",wk:"Святая вода и дробящее оружие",loot:"Костяная пыль (3 gp)"},
+      {n:"Свежий зомби",cat:"hostile",hp:8,arm:0,atk:"Руки (3 dmg)",dmg:3,wil:10,sp:"Не чувствует боли: никогда не проверяет мораль",wk:"Огонь; снести голову",loot:"Пожитки жертвы (8 gp)"},
+      {n:"Гнолл-разбойник",cat:"hostile",hp:7,arm:3,atk:"Цеп (4 dmg)",dmg:4,wil:5,sp:"Хохот: проверка WIL, иначе -1 к атакам на 1 ход",wk:"Брошенная еда отвлекает",loot:"Пёстрая шкура (9 gp), 6 gp"},
+      {n:"Культист Бездны",cat:"hostile",hp:5,arm:0,atk:"Кривой нож (3 dmg)",dmg:3,wil:8,sp:"Один раз за бой кастует «Вспышку боли» (4 dmg)",wk:"Разбить его амулет",loot:"Чёрный амулет (28 gp)"},
+      {n:"Гигантский паук",cat:"hostile",hp:7,arm:3,atk:"Укус (3 dmg) + яд",dmg:3,wil:4,sp:"Паутина: проверка STR или опутан; яд: +1 dmg/ход 3 хода",wk:"Огонь жжёт паутину",loot:"Паучий шёлк (18 gp), яд (15 gp)"},
+      {n:"Крысолюд-воин",cat:"hostile",hp:6,arm:0,atk:"Зубы и когти (3 dmg)",dmg:3,wil:4,sp:"Стая: +1 dmg за каждого сородича рядом",wk:"Боится света и одиночества",loot:"Хвост-трофей (2 gp), 5 gp"},
+      {n:"Гаргулья",cat:"hostile",hp:10,arm:7,atk:"Каменные когти (4 dmg)",dmg:4,wil:7,sp:"Неподвижная гаргулья неотличима от статуи",wk:"Удар киркой по трещине",loot:"Каменное сердце (40 gp)"},
+      {n:"Баньши",cat:"hostile",hp:8,arm:0,atk:"Вопль (4 dmg, игнорирует броню)",dmg:4,wil:9,sp:"Вопль бьёт по всем в комнате; нематериальна",wk:"Серебро и колокольный звон",loot:"Слеза баньши (35 gp)"},
+      {n:"Огр",cat:"hostile",hp:12,arm:3,atk:"Дубина (5 dmg)",dmg:5,wil:4,sp:"Очень тупой: его легко перехитрить",wk:"Хитрость и блестяшки",loot:"Мешок золота (30 gp)"},
+      {n:"Тёмный эльф-ассасин",cat:"hostile",hp:7,arm:3,atk:"Отравленный кинжал (4 dmg)",dmg:4,wil:7,sp:"Первая атака из тени с преимуществом; яд: +1 dmg/ход",wk:"Яркий свет мешает скрытности",loot:"Яд (20 gp), теневой плащ (15 gp)"},
+      {n:"Виверна",cat:"hostile",hp:10,arm:3,atk:"Жало (4 dmg) + яд",dmg:4,wil:6,sp:"Яд: +2 dmg; каждый 3-й ход взлетает (бей только дальним боем)",wk:"Сеть сбивает её с неба",loot:"Ядовитая железа (25 gp)"},
+      {n:"Минотавр-изгой",cat:"hostile",hp:12,arm:5,atk:"Рога (5 dmg)",dmg:5,wil:6,sp:"Таран: при разбеге сбивает с ног",wk:"Красная ткань бесит его",loot:"Рога (30 gp)"},
+      {n:"Призрак палача",cat:"hostile",hp:9,arm:0,atk:"Касание (4 dmg, игнорирует броню)",dmg:4,wil:9,sp:"Нематериален: обычное оружие наносит половину урона",wk:"Освящённое оружие и соль",loot:"Эктоплазма (22 gp)"},
+
+      // 👑 БОССЫ (10)
+      {n:"Король Крыс",cat:"boss",hp:18,arm:3,atk:"Двойной укус (5 dmg)",dmg:5,wil:8,sp:"Каждый 3-й ход призывает 2 крыс (HP 2, dmg 1)",wk:"Огонь; панически боится кошек",loot:"Крысиная корона (300 gp), клад (40 gp)"},
+      {n:"Лич-недоучка",cat:"boss",hp:20,arm:5,atk:"Касание могилы (6 dmg)",dmg:6,wil:10,sp:"Кастует: щит костей (+2 брони) или волну страха (проверка WIL)",wk:"Разбить филактерию — HP упадёт до 8",loot:"Филактерия (200 gp), гримуар (150 gp)"},
+      {n:"Молодой дракон Пламегрив",cat:"boss",hp:22,arm:7,atk:"Пламя (7 dmg по площади)",dmg:7,wil:9,sp:"Дыхание каждый 3-й ход; в остальные ходы когти (5 dmg)",wk:"Мягкое брюхо (броня 3); падок на лесть",loot:"Чешуя (150 gp), сокровища (400 gp)"},
+      {n:"Мать Пауков",cat:"boss",hp:16,arm:5,atk:"Укус (5 dmg) + яд",dmg:5,wil:7,sp:"Паутина: проверка STR; рядом с кладкой берсерк +2 dmg",wk:"Огонь; уничтожь кладку — и она сломается",loot:"Королевский шёлк (80 gp), яд (30 gp)"},
+      {n:"Каменный Колосс",cat:"boss",hp:25,arm:7,atk:"Кулак (7 dmg)",dmg:7,wil:10,sp:"Стрелы наносят половину урона; шаги сотрясают землю (проверка DEX)",wk:"Удар по руне на лбу — двойной урон",loot:"Рунное сердце (250 gp)"},
+      {n:"Вампир-аристократ",cat:"boss",hp:20,arm:5,atk:"Укус (6 dmg) + высасывание",dmg:6,wil:9,sp:"Регенерация 2 HP/ход; взгляд: проверка WIL, иначе очарован",wk:"Солнце, осиновый кол, чеснок",loot:"Кольцо ночи (180 gp), кровавое вино (50 gp)"},
+      {n:"Пожиратель Разума",cat:"boss",hp:18,arm:5,atk:"Щупальца (5 dmg)",dmg:5,wil:10,sp:"Каждый 3-й ход ментальный взрыв: проверка WIL, иначе 4 dmg всем",wk:"Громкий колокольный звон оглушает его",loot:"Кристалл разума (220 gp)"},
+      {n:"Вожак троллей Гром-Пузо",cat:"boss",hp:24,arm:5,atk:"Огромная дубина (6 dmg)",dmg:6,wil:6,sp:"Регенерация 2 HP/ход; рёв заставляет наёмников проверять мораль",wk:"Огонь и кислота останавливают регенерацию",loot:"Палица вожака (90 gp), золото (120 gp)"},
+      {n:"Химера",cat:"boss",hp:20,arm:5,atk:"Три головы: укус (4) + когти (4) + огонь (5)",dmg:5,wil:7,sp:"Атакует дважды за ход разными головами",wk:"Головы ссорятся — брось между ними мясо",loot:"Грива химеры (70 gp), клык (40 gp)"},
+      {n:"Древний Страж Гробницы",cat:"boss",hp:22,arm:7,atk:"Топор стража (7 dmg)",dmg:7,wil:10,sp:"Не поддаётся страху; каждый 3-й ход — рубящий удар по всем рядом",wk:"Святая вода смывает руны: броня падает до 3",loot:"Топор стража (150 gp), древние латы (200 gp)"}
+    ];
+
+    const CATEGORY_DATA = [
+      { key: "peaceful", weight: 25, label: "Мирные", icon: "😌" },
+      { key: "neutral", weight: 30, label: "Нейтральные", icon: "😐" },
+      { key: "hostile", weight: 30, label: "Враждебные", icon: "😡" },
+      { key: "boss", weight: 15, label: "Боссы", icon: "👑" }
+    ];
+    const SAVE_KEY = "durfMonsterSave";
+    const activeFilters = { peaceful: true, neutral: true, hostile: true, boss: true };
+    let encounterHistory = [];
+    let encounterTotal = 0;
+    let historySerial = 0;
+    let searching = false;
+    let noticeTimer = 0;
+
+    const encounterButton = document.getElementById("encounterButton");
+    const buttonIcon = document.getElementById("buttonIcon");
+    const buttonLabel = document.getElementById("buttonLabel");
+    const filterNotice = document.getElementById("filterNotice");
+    const resultSection = document.getElementById("resultSection");
+    const monsterCard = document.getElementById("monsterCard");
+    const historyList = document.getElementById("historyList");
+    const historyEmpty = document.getElementById("historyEmpty");
+    const encounterCount = document.getElementById("encounterCount");
+    const clearHistoryButton = document.getElementById("clearHistory");
+
+    function categoryIsValid(categoryKey) {
+      for (let i = 0; i < CATEGORY_DATA.length; i++) {
+        if (CATEGORY_DATA[i].key === categoryKey) return true;
+      }
+      return false;
+    }
+
+    function getCategoryInfo(categoryKey) {
+      for (let i = 0; i < CATEGORY_DATA.length; i++) {
+        if (CATEGORY_DATA[i].key === categoryKey) return CATEGORY_DATA[i];
+      }
+      return { key: categoryKey, label: "Неизвестно", icon: "?", weight: 0 };
+    }
+
+    function loadState() {
+      try {
+        const saved = window.localStorage.getItem(SAVE_KEY);
+        if (!saved) return;
+        const parsed = JSON.parse(saved);
+        if (!parsed || typeof parsed !== "object") return;
+
+        if (parsed.history && typeof parsed.history.length === "number") {
+          let largestId = 0;
+          for (let i = 0; i < parsed.history.length; i++) {
+            const entry = parsed.history[i];
+            if (!entry || typeof entry.n !== "string" || !categoryIsValid(entry.cat)) continue;
+            let entryId = parseInt(entry.id, 10);
+            if (isNaN(entryId) || entryId < 1) entryId = largestId + 1;
+            encounterHistory.push({ id: entryId, n: entry.n, cat: entry.cat });
+            if (entryId > largestId) largestId = entryId;
+          }
+          historySerial = largestId;
+        }
+
+        if (typeof parsed.count === "number" && isFinite(parsed.count) && parsed.count >= 0) {
+          encounterTotal = Math.floor(parsed.count);
+        }
+        if (typeof parsed.nextId === "number" && isFinite(parsed.nextId) && parsed.nextId > historySerial) {
+          historySerial = Math.floor(parsed.nextId);
+        }
+      } catch (error) {
+        encounterHistory = [];
+        encounterTotal = 0;
+        historySerial = 0;
+      }
+    }
+
+    function saveState() {
+      try {
+        window.localStorage.setItem(SAVE_KEY, JSON.stringify({
+          history: encounterHistory,
+          count: encounterTotal,
+          nextId: historySerial
+        }));
+      } catch (error) {
+        // The generator stays usable when storage is disabled or full.
+      }
+    }
+
+    function renderCount() {
+      encounterCount.textContent = "Встреч существ: " + encounterTotal;
+      clearHistoryButton.disabled = encounterHistory.length === 0 && encounterTotal === 0;
+    }
+
+    function renderHistory() {
+      historyList.innerHTML = "";
+      if (encounterHistory.length === 0) {
+        historyList.style.display = "none";
+        historyEmpty.style.display = "block";
+      } else {
+        historyEmpty.style.display = "none";
+        historyList.style.display = "block";
+        for (let i = encounterHistory.length - 1; i >= 0; i--) {
+          const entry = encounterHistory[i];
+          const category = getCategoryInfo(entry.cat);
+          const item = document.createElement("li");
+          item.className = "history-item";
+
+          const info = document.createElement("div");
+          info.className = "history-info";
+
+          const name = document.createElement("span");
+          name.className = "history-name";
+          name.textContent = entry.n;
+
+          const categoryLabel = document.createElement("span");
+          categoryLabel.className = "history-category cat-" + entry.cat;
+          categoryLabel.textContent = category.icon + " " + category.label;
+
+          const removeButton = document.createElement("button");
+          removeButton.className = "remove-history";
+          removeButton.type = "button";
+          removeButton.setAttribute("data-history-id", String(entry.id));
+          removeButton.setAttribute("aria-label", "Удалить встречу: " + entry.n);
+          removeButton.textContent = "×";
+
+          info.appendChild(name);
+          info.appendChild(categoryLabel);
+          item.appendChild(info);
+          item.appendChild(removeButton);
+          historyList.appendChild(item);
+        }
+      }
+      renderCount();
+    }
+
+    function showFilterNotice(message) {
+      filterNotice.textContent = message;
+      filterNotice.style.display = "block";
+      if (noticeTimer) window.clearTimeout(noticeTimer);
+      noticeTimer = window.setTimeout(function () {
+        filterNotice.style.display = "none";
+        noticeTimer = 0;
+      }, 2200);
+    }
+
+    function chooseMonster() {
+      let totalWeight = 0;
+      for (let i = 0; i < CATEGORY_DATA.length; i++) {
+        if (activeFilters[CATEGORY_DATA[i].key]) totalWeight += CATEGORY_DATA[i].weight;
+      }
+      if (totalWeight <= 0) return null;
+
+      let ticket = Math.random() * totalWeight;
+      let chosenCategory = "";
+      for (let i = 0; i < CATEGORY_DATA.length; i++) {
+        const category = CATEGORY_DATA[i];
+        if (!activeFilters[category.key]) continue;
+        if (ticket < category.weight) {
+          chosenCategory = category.key;
+          break;
+        }
+        ticket -= category.weight;
+      }
+
+      if (!chosenCategory) {
+        for (let i = CATEGORY_DATA.length - 1; i >= 0; i--) {
+          if (activeFilters[CATEGORY_DATA[i].key]) {
+            chosenCategory = CATEGORY_DATA[i].key;
+            break;
+          }
+        }
+      }
+
+      const candidates = [];
+      for (let i = 0; i < MONSTERS.length; i++) {
+        if (MONSTERS[i].cat === chosenCategory) candidates.push(MONSTERS[i]);
+      }
+      if (candidates.length === 0) return null;
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
+    function showMonster(monster) {
+      const category = getCategoryInfo(monster.cat);
+      monsterCard.className = "monster-card cat-" + monster.cat;
+      document.getElementById("monsterName").textContent = monster.n;
+      document.getElementById("monsterCategory").textContent = category.icon + " " + category.label;
+      document.getElementById("monsterHp").textContent = String(monster.hp);
+      document.getElementById("monsterArmor").textContent = String(monster.arm);
+      document.getElementById("monsterAttack").textContent = monster.atk;
+      document.getElementById("monsterWill").textContent = String(monster.wil);
+      document.getElementById("monsterSpecial").textContent = monster.sp;
+      document.getElementById("monsterWeakness").textContent = monster.wk || "—";
+      document.getElementById("monsterLoot").textContent = monster.loot;
+      resultSection.style.display = "block";
+      monsterCard.offsetWidth;
+      monsterCard.classList.add("is-entering");
+    }
+
+    function handleEncounter() {
+      if (searching) return;
+      searching = true;
+      encounterButton.disabled = true;
+      encounterButton.classList.add("is-searching");
+      buttonIcon.textContent = "✦";
+      buttonLabel.textContent = "Ищем в темноте...";
+
+      window.setTimeout(function () {
+        const monster = chooseMonster();
+        if (monster) {
+          showMonster(monster);
+          historySerial += 1;
+          encounterHistory.push({ id: historySerial, n: monster.n, cat: monster.cat });
+          encounterTotal += 1;
+          saveState();
+          renderHistory();
+        } else {
+          showFilterNotice("Не удалось найти существ для выбранных категорий.");
+        }
+
+        buttonIcon.textContent = "🎲";
+        buttonLabel.textContent = "Встретить существо";
+        encounterButton.classList.remove("is-searching");
+        encounterButton.disabled = false;
+        searching = false;
+      }, 250);
+    }
+
+    const filterButtons = document.getElementsByClassName("filter-btn");
+    for (let i = 0; i < filterButtons.length; i++) {
+      filterButtons[i].addEventListener("click", function () {
+        const categoryKey = this.getAttribute("data-category");
+        if (!categoryKey) return;
+
+        if (activeFilters[categoryKey]) {
+          let enabledCount = 0;
+          for (let j = 0; j < CATEGORY_DATA.length; j++) {
+            if (activeFilters[CATEGORY_DATA[j].key]) enabledCount += 1;
+          }
+          if (enabledCount <= 1) {
+            showFilterNotice("Оставьте включённой хотя бы одну категорию.");
+            return;
+          }
+        }
+
+        activeFilters[categoryKey] = !activeFilters[categoryKey];
+        this.setAttribute("aria-pressed", activeFilters[categoryKey] ? "true" : "false");
+      });
+    }
+
+    encounterButton.addEventListener("click", handleEncounter);
+
+    historyList.addEventListener("click", function (event) {
+      const target = event.target;
+      if (!target || !target.classList || !target.classList.contains("remove-history")) return;
+      const itemId = parseInt(target.getAttribute("data-history-id"), 10);
+      const updatedHistory = [];
+      for (let i = 0; i < encounterHistory.length; i++) {
+        if (encounterHistory[i].id !== itemId) updatedHistory.push(encounterHistory[i]);
+      }
+      encounterHistory = updatedHistory;
+      saveState();
+      renderHistory();
+    });
+
+    clearHistoryButton.addEventListener("click", function () {
+      if (encounterHistory.length === 0 && encounterTotal === 0) return;
+      if (!window.confirm("Очистить историю встреч и сбросить счётчик?")) return;
+      encounterHistory = [];
+      encounterTotal = 0;
+      historySerial = 0;
+      saveState();
+      renderHistory();
+    });
+
+    loadState();
+    renderHistory();
+  </script>
+</body>
+</html>
